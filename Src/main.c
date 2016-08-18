@@ -35,7 +35,6 @@
 #include "usb_device.h"
 
 /* USER CODE BEGIN Includes */
-
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -46,7 +45,8 @@ TIM_HandleTypeDef htim10;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-
+char msg[200];
+uint16_t msgguid = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -237,9 +237,9 @@ void MX_TIM10_Init(void)
 {
 
   htim10.Instance = TIM10;
-  htim10.Init.Prescaler = 4200;
+  htim10.Init.Prescaler = 48000;
   htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim10.Init.Period = 1000;
+  htim10.Init.Period = 2000;
   htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   HAL_TIM_Base_Init(&htim10);
 
@@ -379,9 +379,12 @@ void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-    HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+	HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+	sprintf(msg, "id=%d, test.", msgguid++);
+
+	USBD_StatusTypeDef result = MX_USB_DEVICE_SENT_DATA((uint8_t *) msg, strlen(msg));
 }
 /* USER CODE END 4 */
 

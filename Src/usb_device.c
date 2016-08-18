@@ -56,6 +56,12 @@ void MX_USB_DEVICE_Init(void)
   USBD_Start(&hUsbDeviceFS);
 
 }
+
+USBD_StatusTypeDef MX_USB_DEVICE_SENT_DATA(uint8_t* Buf, uint16_t Len)
+{
+	return CDC_Transmit_FS( Buf,  Len);
+}
+
 /**
   * @}
   */
