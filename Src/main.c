@@ -35,6 +35,7 @@
 #include "usb_device.h"
 
 /* USER CODE BEGIN Includes */
+typedef enum {FALSE = 0, TRUE = 1} bool;
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -46,6 +47,9 @@ TIM_HandleTypeDef htim10;
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 char msg[200];
+volatile int tim1cnt;
+volatile int tim2cnt;
+volatile int tim3cnt;
 uint16_t msgguid = 0;
 /* USER CODE END PV */
 
@@ -59,11 +63,9 @@ static void MX_TIM10_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
-
 /* USER CODE END 0 */
 
 int main(void)
@@ -91,6 +93,9 @@ int main(void)
 
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim10);
+  HAL_TIM_Encoder_Start(&htim1, TIM_CHANNEL_ALL);
+  HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_ALL);
+  HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_ALL);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -154,10 +159,10 @@ void MX_TIM1_Init(void)
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = 0;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 0;
+  htim1.Init.Period = 65535;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
-  sConfig.EncoderMode = TIM_ENCODERMODE_TI1;
+  sConfig.EncoderMode = TIM_ENCODERMODE_TI12;
   sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
@@ -184,9 +189,9 @@ void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 0;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 0;
+  htim2.Init.Period = 4294967295;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  sConfig.EncoderMode = TIM_ENCODERMODE_TI1;
+  sConfig.EncoderMode = TIM_ENCODERMODE_TI12;
   sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
@@ -213,9 +218,9 @@ void MX_TIM3_Init(void)
   htim3.Instance = TIM3;
   htim3.Init.Prescaler = 0;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 0;
+  htim3.Init.Period = 65535;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  sConfig.EncoderMode = TIM_ENCODERMODE_TI1;
+  sConfig.EncoderMode = TIM_ENCODERMODE_TI12;
   sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
@@ -379,12 +384,27 @@ void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+bool dataFormed = FALSE;
+bool gaugeContact = FALSE;
+
+void Form_Data_To_Send(bool gauge) {
+//	tim1cnt = TIM1->CNT;
+//	tim2cnt = TIM2->CNT;
+//	tim3cnt = TIM3->CNT;
+//	gaugeContact = gauge;
+	sprintf(msg, "X%d;%d;%d;%d", TIM1->CNT, TIM2->CNT, TIM3->CNT, gauge);
+	dataFormed = TRUE;
+}
+
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
 
-	sprintf(msg, "id=%d, test.", msgguid++);
+	if (!dataFormed) {
+		Form_Data_To_Send(FALSE);
+	}
 
-	USBD_StatusTypeDef result = MX_USB_DEVICE_SENT_DATA((uint8_t *) msg, strlen(msg));
+	MX_USB_DEVICE_SENT_DATA((uint8_t *) msg, strlen(msg));
+	dataFormed = FALSE;
 }
 /* USER CODE END 4 */
 

@@ -274,9 +274,10 @@ static int8_t CDC_Receive_FS (uint8_t* Buf, uint32_t *Len)
   * @param  Len: Number of data to be send (in bytes)
   * @retval Result of the operation: USBD_OK if all operations are OK else USBD_FAIL or USBD_BUSY
   */
-USBD_StatusTypeDef CDC_Transmit_FS(uint8_t* Buf, uint16_t Len) {
-	uint8_t result = USBD_OK;
-	/* USER CODE BEGIN 7 */
+uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
+{
+  uint8_t result = USBD_OK;
+  /* USER CODE BEGIN 7 */ 
 
 	if (hUsbDevice_0 == NULL)
 		return USBD_FAIL;
@@ -289,8 +290,8 @@ USBD_StatusTypeDef CDC_Transmit_FS(uint8_t* Buf, uint16_t Len) {
 	USBD_CDC_SetTxBuffer(hUsbDevice_0, Buf, Len);
 	result = USBD_CDC_TransmitPacket(hUsbDevice_0);
 
-	/* USER CODE END 7 */
-	return result;
+  /* USER CODE END 7 */ 
+  return result;
 }
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_IMPLEMENTATION */
