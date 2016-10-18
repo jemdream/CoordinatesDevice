@@ -47,10 +47,15 @@ TIM_HandleTypeDef htim10;
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 char msg[200];
+
 volatile int tim1cnt;
 volatile int tim2cnt;
 volatile int tim3cnt;
+
 uint16_t msgguid = 0;
+
+bool dataFormed = FALSE;
+bool gaugeContact = FALSE;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -244,7 +249,7 @@ void MX_TIM10_Init(void)
   htim10.Instance = TIM10;
   htim10.Init.Prescaler = 48000;
   htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim10.Init.Period = 2000;
+  htim10.Init.Period = 100;
   htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   HAL_TIM_Base_Init(&htim10);
 
@@ -295,8 +300,8 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(CS_I2C_SPI_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PE4 PE5 MEMS_INT2_Pin */
-  GPIO_InitStruct.Pin = GPIO_PIN_4|GPIO_PIN_5|MEMS_INT2_Pin;
+  /*Configure GPIO pins : PE4 PE5 */
+  GPIO_InitStruct.Pin = GPIO_PIN_4|GPIO_PIN_5;
   GPIO_InitStruct.Mode = GPIO_MODE_EVT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
@@ -331,6 +336,12 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   GPIO_InitStruct.Alternate = GPIO_AF5_SPI1;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : GaugeContact_Pin */
+  GPIO_InitStruct.Pin = GaugeContact_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GaugeContact_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : CLK_IN_Pin PB12 */
   GPIO_InitStruct.Pin = CLK_IN_Pin|GPIO_PIN_12;
@@ -381,30 +392,42 @@ void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOD, LD4_Pin|LD3_Pin|LD5_Pin|LD6_Pin 
                           |Audio_RST_Pin, GPIO_PIN_RESET);
 
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI1_IRQn);
+
 }
 
 /* USER CODE BEGIN 4 */
-bool dataFormed = FALSE;
-bool gaugeContact = FALSE;
-
 void Form_Data_To_Send(bool gauge) {
-//	tim1cnt = TIM1->CNT;
-//	tim2cnt = TIM2->CNT;
-//	tim3cnt = TIM3->CNT;
-//	gaugeContact = gauge;
-	sprintf(msg, "X%d;%d;%d;%d", TIM1->CNT, TIM2->CNT, TIM3->CNT, gauge);
+	tim1cnt = TIM1->CNT;
+	tim2cnt = TIM2->CNT;
+	tim3cnt = TIM3->CNT;
+
+	gaugeContact = gauge;
+
+	sprintf(msg, "X%-5d;%-11d;%-5d;%-1d", tim1cnt, tim2cnt, tim3cnt, gaugeContact);
+
 	dataFormed = TRUE;
 }
 
+// TODO remember to change NVIC setup, so given callback function is top prio
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
 
+	// race condition caused by priorities in NVIC:
 	if (!dataFormed) {
 		Form_Data_To_Send(FALSE);
 	}
 
 	MX_USB_DEVICE_SENT_DATA((uint8_t *) msg, strlen(msg));
 	dataFormed = FALSE;
+}
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+	if (!dataFormed) {
+		Form_Data_To_Send(TRUE);
+	}
 }
 /* USER CODE END 4 */
 
