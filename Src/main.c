@@ -48,9 +48,13 @@ TIM_HandleTypeDef htim10;
 /* Private variables ---------------------------------------------------------*/
 char msg[200];
 
-volatile int tim1cnt;
+volatile int16_t tim1cnt;
 volatile int tim2cnt;
-volatile int tim3cnt;
+volatile int16_t tim3cnt;
+
+volatile int16_t tim1um;
+volatile int tim2um;
+volatile int16_t tim3um;
 
 uint16_t msgguid = 0;
 
@@ -399,21 +403,37 @@ void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+const int32_t stepsPerMicrometre = 4;
+
+int Convert_To_Micrometres16(volatile int16_t *cnt) {
+
+	return *cnt / stepsPerMicrometre;
+}
+
+int Convert_To_Micrometres(volatile int *cnt) {
+
+	return *cnt / stepsPerMicrometre;
+}
+
 void Form_Data_To_Send(bool gauge) {
+
 	tim1cnt = TIM1->CNT;
 	tim2cnt = TIM2->CNT;
 	tim3cnt = TIM3->CNT;
 
+	tim1um = Convert_To_Micrometres16(&tim1cnt);
+	tim2um = Convert_To_Micrometres(&tim2cnt);
+	tim3um = Convert_To_Micrometres16(&tim3cnt);
+
 	gaugeContact = gauge;
 
-	sprintf(msg, "X%-5d;%-11d;%-5d;%-1d", tim1cnt, tim2cnt, tim3cnt, gaugeContact);
+	sprintf(msg, "X%-5d;%-11d;%-5d;%-1d", tim1um, tim2um, tim3um, gaugeContact);
 
 	dataFormed = TRUE;
 }
 
 // TODO remember to change NVIC setup, so given callback function is top prio
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-	HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
 
 	// race condition caused by priorities in NVIC:
 	if (!dataFormed) {
