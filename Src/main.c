@@ -48,13 +48,22 @@ TIM_HandleTypeDef htim10;
 /* Private variables ---------------------------------------------------------*/
 char msg[200];
 
-volatile int16_t tim1cnt;
-volatile int tim2cnt;
-volatile int16_t tim3cnt;
+//typedef struct
+//{
+//  TIM_TypeDef                 *Instance;     /*!< Register base address             */
+//  TIM_Base_InitTypeDef        Init;          /*!< TIM Time Base required parameters */
+//  HAL_TIM_ActiveChannel       Channel;       /*!< Active channel                    */
+//  DMA_HandleTypeDef           *hdma[7];      /*!< DMA Handlers array
+//                                             This array is accessed by a @ref DMA_Handle_index */
+//  HAL_LockTypeDef             Lock;          /*!< Locking object                    */
+//  __IO HAL_TIM_StateTypeDef   State;         /*!< TIM operation state               */
+//}TIM_Variables;
 
-volatile int16_t tim1um;
-volatile int tim2um;
-volatile int16_t tim3um;
+volatile int16_t previousCNT1;
+volatile int baseCNT1;
+
+volatile int16_t previousCNT3;
+volatile int baseCNT3;
 
 uint16_t msgguid = 0;
 
@@ -415,15 +424,44 @@ int Convert_To_Micrometres(volatile int *cnt) {
 	return *cnt / stepsPerMicrometre;
 }
 
+// TODO Bookmark
+int Count_Base_Value(volatile int16_t *cnt, volatile int *baseCNT){
+
+	return cnt;
+}
+
+const int16_t negativeTreshold = -25000;
+const int16_t positiveTreshold = 25000;
+
+const int16_t signedIntMax = 32767;
+const int16_t signedIntMin = -32768;
+
+const int16_t signedIntOffsetMax = 16383;
+const int16_t signedIntOffsetMin = -16384;
+
 void Form_Data_To_Send(bool gauge) {
 
-	tim1cnt = TIM1->CNT;
-	tim2cnt = TIM2->CNT;
-	tim3cnt = TIM3->CNT;
+	volatile int16_t tim1cnt = TIM1->CNT;
+	volatile int16_t tim3cnt = TIM3->CNT;
+	volatile int tim2cnt = TIM2->CNT;
 
-	tim1um = Convert_To_Micrometres16(&tim1cnt);
-	tim2um = Convert_To_Micrometres(&tim2cnt);
-	tim3um = Convert_To_Micrometres16(&tim3cnt);
+//	if(previousCNT1 > positiveTreshold && tim1cnt < 0){
+//		baseCNT1 += signedIntMax;
+//	} else if (previousCNT1 < negativeTreshold && tim1cnt > 0) {
+//		baseCNT1 += signedIntMin;
+//	}
+//	previousCNT1 = tim1cnt;
+//
+//	if (previousCNT3 > positiveTreshold && tim3cnt < 0) {
+//		baseCNT3 = signedIntMax;
+//	} else if (previousCNT3 < negativeTreshold && tim3cnt > 0) {
+//		baseCNT3 += signedIntMin;
+//	}
+//	previousCNT3 = tim3cnt;
+
+	int tim1um = Convert_To_Micrometres16(&tim1cnt);
+	int tim2um = Convert_To_Micrometres(&tim2cnt);
+	int tim3um = Convert_To_Micrometres16(&tim3cnt);
 
 	gaugeContact = gauge;
 
@@ -440,7 +478,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		Form_Data_To_Send(FALSE);
 	}
 
-	MX_USB_DEVICE_SENT_DATA((uint8_t *) msg, strlen(msg));
+	int sLength = strlen(msg);
+	MX_USB_DEVICE_SENT_DATA((uint8_t *) msg, sLength);
 	dataFormed = FALSE;
 }
 
