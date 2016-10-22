@@ -352,7 +352,7 @@ void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : GaugeContact_Pin */
   GPIO_InitStruct.Pin = GaugeContact_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GaugeContact_GPIO_Port, &GPIO_InitStruct);
 
@@ -451,7 +451,7 @@ void Form_Data_To_Send(bool gauge) {
 //		baseCNT1 += signedIntMin;
 //	}
 //	previousCNT1 = tim1cnt;
-//
+
 //	if (previousCNT3 > positiveTreshold && tim3cnt < 0) {
 //		baseCNT3 = signedIntMax;
 //	} else if (previousCNT3 < negativeTreshold && tim3cnt > 0) {
@@ -475,7 +475,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
 	// race condition caused by priorities in NVIC:
 	if (!dataFormed) {
-		Form_Data_To_Send(FALSE);
+		bool gauge = HAL_GPIO_ReadPin(GPIOB, GaugeContact_Pin) ? 0 : 1;
+		Form_Data_To_Send(gauge);
 	}
 
 	int sLength = strlen(msg);
@@ -484,8 +485,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+
 	if (!dataFormed) {
-		Form_Data_To_Send(TRUE);
+		bool gauge = HAL_GPIO_ReadPin(GPIOB, GaugeContact_Pin) ? 0 : 1;
+		Form_Data_To_Send(gauge);
 	}
 }
 /* USER CODE END 4 */
