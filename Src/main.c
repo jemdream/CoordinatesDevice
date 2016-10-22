@@ -46,29 +46,9 @@ TIM_HandleTypeDef htim10;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-char msg[200];
-
-//typedef struct
-//{
-//  TIM_TypeDef                 *Instance;     /*!< Register base address             */
-//  TIM_Base_InitTypeDef        Init;          /*!< TIM Time Base required parameters */
-//  HAL_TIM_ActiveChannel       Channel;       /*!< Active channel                    */
-//  DMA_HandleTypeDef           *hdma[7];      /*!< DMA Handlers array
-//                                             This array is accessed by a @ref DMA_Handle_index */
-//  HAL_LockTypeDef             Lock;          /*!< Locking object                    */
-//  __IO HAL_TIM_StateTypeDef   State;         /*!< TIM operation state               */
-//}TIM_Variables;
-
-volatile int16_t previousCNT1;
-volatile int baseCNT1;
-
-volatile int16_t previousCNT3;
-volatile int baseCNT3;
-
-uint16_t msgguid = 0;
-
+char msg[50];
 bool dataFormed = FALSE;
-bool gaugeContact = FALSE;
+volatile bool gaugeContact = FALSE;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -412,32 +392,42 @@ void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-const int32_t stepsPerMicrometre = 4;
 
-int Convert_To_Micrometres16(volatile int16_t *cnt) {
+volatile int16_t previousCNT1;
+volatile int baseCNT1;
 
-	return *cnt / stepsPerMicrometre;
-}
+volatile int16_t previousCNT3;
+volatile int baseCNT3;
+
+const int16_t negativeTreshold = -30000;
+const int16_t positiveTreshold = 30000;
+
+const int intMax = 65535;
+const int stepsPerMicrometre = 1;
 
 int Convert_To_Micrometres(volatile int *cnt) {
 
 	return *cnt / stepsPerMicrometre;
 }
 
-// TODO Bookmark
-int Count_Base_Value(volatile int16_t *cnt, volatile int *baseCNT){
+void Modify(volatile int16_t *previousCNT, volatile int16_t *timcnt, volatile int *baseCNT, volatile int *newTim) {
 
-	return cnt;
+	if (*previousCNT > positiveTreshold && *timcnt < 0) {
+		*baseCNT += (intMax + 1);
+	}
+	else if (*previousCNT < negativeTreshold && *timcnt > 0) {
+		*baseCNT -= (intMax + 1);
+	}
+
+	if (*baseCNT != 0) {
+		*newTim = *timcnt + *baseCNT;
+	}
+	else {
+		*newTim = *timcnt;
+	}
+
+	*previousCNT = *timcnt;
 }
-
-const int16_t negativeTreshold = -25000;
-const int16_t positiveTreshold = 25000;
-
-const int16_t signedIntMax = 32767;
-const int16_t signedIntMin = -32768;
-
-const int16_t signedIntOffsetMax = 16383;
-const int16_t signedIntOffsetMin = -16384;
 
 void Form_Data_To_Send(bool gauge) {
 
@@ -445,27 +435,19 @@ void Form_Data_To_Send(bool gauge) {
 	volatile int16_t tim3cnt = TIM3->CNT;
 	volatile int tim2cnt = TIM2->CNT;
 
-//	if(previousCNT1 > positiveTreshold && tim1cnt < 0){
-//		baseCNT1 += signedIntMax;
-//	} else if (previousCNT1 < negativeTreshold && tim1cnt > 0) {
-//		baseCNT1 += signedIntMin;
-//	}
-//	previousCNT1 = tim1cnt;
+	volatile int newTim1;
+	volatile int newTim3;
 
-//	if (previousCNT3 > positiveTreshold && tim3cnt < 0) {
-//		baseCNT3 = signedIntMax;
-//	} else if (previousCNT3 < negativeTreshold && tim3cnt > 0) {
-//		baseCNT3 += signedIntMin;
-//	}
-//	previousCNT3 = tim3cnt;
+	Modify(&previousCNT1, &tim1cnt, &baseCNT1, &newTim1);
+	Modify(&previousCNT3, &tim3cnt, &baseCNT3, &newTim3);
 
-	int tim1um = Convert_To_Micrometres16(&tim1cnt);
-	int tim2um = Convert_To_Micrometres(&tim2cnt);
-	int tim3um = Convert_To_Micrometres16(&tim3cnt);
+	volatile int tim1um = Convert_To_Micrometres(&newTim1);
+	volatile int tim2um = Convert_To_Micrometres(&tim2cnt);
+	volatile int tim3um = Convert_To_Micrometres(&newTim3);
 
 	gaugeContact = gauge;
 
-	sprintf(msg, "X%-5d;%-11d;%-5d;%-1d", tim1um, tim2um, tim3um, gaugeContact);
+	sprintf(msg, "X%-11d;%-11d;%-11d;%-1d", tim1um, tim2um, tim3um, gaugeContact);
 
 	dataFormed = TRUE;
 }
