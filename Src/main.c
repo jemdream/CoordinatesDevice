@@ -402,7 +402,7 @@ volatile int baseCNT3;
 const int16_t negativeTreshold = -30000;
 const int16_t positiveTreshold = 30000;
 
-const int intMax = 65535;
+const int intMax = 65536;
 const int stepsPerMicrometre = 1;
 
 int Convert_To_Micrometres(volatile int *cnt) {
@@ -413,10 +413,10 @@ int Convert_To_Micrometres(volatile int *cnt) {
 void Modify(volatile int16_t *previousCNT, volatile int16_t *timcnt, volatile int *baseCNT, volatile int *newTim) {
 
 	if (*previousCNT > positiveTreshold && *timcnt < 0) {
-		*baseCNT += (intMax + 1);
+		*baseCNT += intMax;
 	}
 	else if (*previousCNT < negativeTreshold && *timcnt > 0) {
-		*baseCNT -= (intMax + 1);
+		*baseCNT -= intMax;
 	}
 
 	if (*baseCNT != 0) {
